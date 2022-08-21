@@ -18,25 +18,14 @@ func Wrapper(handler HandlerFunc) func(c *gin.Context) {
 			if h, ok := err.(*APIException); ok {
 				apiException = h
 			} else if e, ok := err.(error); ok {
-				if gin.Mode() == "debug" {
-					// 错误
-					apiException = ServerErrorWithMsg(e.Error())
-				} else {
-					// 未知错误
-					apiException = UnknownError(e.Error())
-				}
+				apiException = ServerErrorWithMsg(e.Error())
 			} else {
-				apiException = ServerError()
+				apiException = UnknownError()
 			}
 			c.JSON(http.StatusOK, apiException)
 			return
 		}
 	}
-}
-
-// ServerError 500 错误处理
-func ServerError() *APIException {
-	return newAPIException(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 }
 
 // ServerErrorWithMsg 500 错误处理
@@ -49,9 +38,14 @@ func NotFound() *APIException {
 	return newAPIException(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 }
 
+// NotFoundWithMsg 404 错误
+func NotFoundWithMsg(msg string) *APIException {
+	return newAPIException(http.StatusNotFound, msg)
+}
+
 // UnknownError 未知错误
-func UnknownError(message string) *APIException {
-	return newAPIException(http.StatusForbidden, message)
+func UnknownError() *APIException {
+	return newAPIException(http.StatusForbidden, "UnknownError")
 }
 
 // ParameterError 参数错误

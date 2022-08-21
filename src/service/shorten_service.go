@@ -1,34 +1,81 @@
 package service
 
 import (
+	"behappy-url-shortener/src/common"
 	"behappy-url-shortener/src/model"
-	"github.com/sirupsen/logrus"
-	url2 "net/url"
+	"behappy-url-shortener/src/util"
+	"github.com/golang-module/carbon/v2"
+	"github.com/mitchellh/mapstructure"
 	"regexp"
+	"time"
 )
 
-func GetShortenUrl(r *model.GetShortenRequest) (error, string) {
-	return nil, "nil"
+func ShortenUrl(r *model.ShortenRequest) (error, model.ShortenResponse) {
+	var shortenRes model.ShortenResponse
+	ok := checkLongUrl(r.LongUrl)
+	if !ok {
+		return common.ServerErrorWithMsg("url is not correct!"), shortenRes
+	}
+	endDateIsZero := r.EndDate.IsZero()
+	startDateIsZero := r.StartDate.IsZero()
+	endDateBeforeNow := !endDateIsZero && r.EndDate.Lt(carbon.Now())
+	startDateBeforeNow := !startDateIsZero && r.StartDate.Lt(carbon.Now())
+	endDateBeforeStartDate := !startDateIsZero && !endDateIsZero && r.StartDate.Gt(r.EndDate.Carbon)
+	if endDateBeforeNow || startDateBeforeNow || endDateBeforeStartDate {
+		return common.ParameterError("time param is not correct!"), shortenRes
+	}
+	var expired time.Duration
+	if !endDateIsZero {
+		expired = r.EndDate.Carbon2Time().Sub(util.ZeroTime(time.Now()))
+	}
+	var currentErr error
+	model.Set(r.LongUrl, r.StartDate, r.EndDate, expired, r.CNew, func(err error, reply map[string]string) {
+		if err != nil {
+			currentErr = err
+			return
+		}
+		mapstructure.Decode(reply, &shortenRes)
+	})
+	return currentErr, shortenRes
 }
 
-func checkUrl(url string, checkDomain bool) bool {
-	valid := true
-	regexPattern := "/^(ftp|http|https):\\/\\/(\\w+:{0,1}\\w*@)?(\\S+)(:[0-9]+)?(\\/|\\/([\\w#!:.?+=&%@!\\-\\/]))?/"
-	matched, _ := regexp.MatchString(regexPattern, "")
-	if !matched {
-		valid = false
+func HandleShortenUrl(shortUrl string) (error, string) {
+	longUrlRes := ""
+	ok := checkShortUrl(shortUrl)
+	if !ok {
+		return common.ServerErrorWithMsg("url is not correct!"), longUrlRes
 	}
-	if matched && checkDomain {
-		loc, loc_err := url2.Parse(url)
-		runOps, ori_err := url2.Parse(model.RunOpts.Url)
-		if loc_err != nil && ori_err != nil {
-			logrus.Error("解析url错误")
-			valid = false
+	var currentErr error
+	model.Get(shortUrl, func(err error, reply map[string]string) {
+		if err != nil {
+			currentErr = err
+			return
 		}
-		// 不解析当前域下的地址
-		if loc.Hostname() == runOps.Hostname() {
-			valid = false
+		startDate := reply["start_date"]
+		endDate := reply["end_date"]
+		longUrl := reply["url"]
+		if startDate != "" && endDate != "" {
+			dbStartDate := carbon.Parse(startDate)
+			dbEndDate := carbon.Parse(endDate)
+			now := carbon.Now()
+			if !(now.Gt(dbStartDate) && now.Lt(dbEndDate)) {
+				currentErr = common.ServerErrorWithMsg("url can't be used!")
+			}
 		}
-	}
-	return valid
+		longUrlRes = longUrl
+	})
+	return currentErr, longUrlRes
+}
+
+func checkLongUrl(url string) bool {
+	regexPattern := `^(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?`
+	matched, _ := regexp.MatchString(regexPattern, url)
+	// Url correct
+	return matched
+}
+func checkShortUrl(url string) bool {
+	regexPattern := `^[\w=]+$`
+	matched, _ := regexp.MatchString(regexPattern, url)
+	// Url correct
+	return matched
 }

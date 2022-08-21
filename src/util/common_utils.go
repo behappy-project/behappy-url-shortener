@@ -236,7 +236,19 @@ func ParseYesterdayTime(t ...time.Time) time.Time {
 	}
 }
 
-// 把int64转换成1993-12-26 10:30:00
+// ZeroTime 获取0点时间
+func ZeroTime(currentTime time.Time) time.Time {
+	return time.Date(currentTime.Year(),
+		currentTime.Month(),
+		currentTime.Day(),
+		0,
+		0,
+		0,
+		0,
+		currentTime.Location())
+}
+
+// ParseTimeToTimeStr 把int64转换成1993-12-26 10:30:00
 func ParseTimeToTimeStr(intTime int64, strfmt ...string) string {
 	t := time.Unix(intTime/1e3, 0)
 	defaultFmt := "2006-01-02 15:04:05"

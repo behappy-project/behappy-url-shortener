@@ -8,7 +8,7 @@ import (
 
 func ShortenRoute(e *gin.RouterGroup) {
 	// 通过long_url获取shorten_url
-	e.POST("shorten", common.Wrapper(handler.GetShortenUrl))
+	e.POST("shorten", common.Wrapper(handler.ShortenUrl))
 	// 使用shorten_url进行地址跳转
 	e.GET(":short_url", common.Wrapper(handler.HandleShortenUrl))
 }
