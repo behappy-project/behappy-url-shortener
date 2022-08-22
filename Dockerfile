@@ -9,4 +9,5 @@ COPY . .
 RUN go build -o app .
 FROM scratch
 COPY --from=builder /build/app /
+COPY --from=builder /build/templates /templates
 ENTRYPOINT ["/app"]
