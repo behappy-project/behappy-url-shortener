@@ -5,6 +5,7 @@ import (
 	"behappy-url-shortener/src/model"
 	"behappy-url-shortener/src/routers"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/goutil/strutil"
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,8 @@ func startApp() {
 	//模板解析
 	g.LoadHTMLGlob("templates/**/*")
 	routers.ShortenRoute(routerGroup)
+	// 注册pprof相关路由
+	pprof.Register(g)
 	// 启动HTTP服务，默认在0.0.0.0:3000启动服务
 	addr := ":" + model.RunOpts.Port
 	if err := g.Run(addr); err != nil {
