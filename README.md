@@ -1,3 +1,6 @@
+## 技术沟通群
+<img src="https://raw.githubusercontent.com/wang-xiaowu/picture_repository/master/behappy_group.jpg" width="300px">
+
 # behappy-url-shortener
 基于go+redis实现的短地址服务
 
